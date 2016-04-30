@@ -6,7 +6,7 @@ let rmq = undefined;
 
 function ws2rmq({method, ...data}, {[DATA_SENTINEL]: meta}) {
     return {
-        topic: [realm, method].join("."),
+        topic: [meta.realm, method].join("."),
         data: _.extend(data, {meta})
     }
 }
@@ -16,14 +16,16 @@ function rmq2ws(msg) {
     let data = JSON.parse(msg.content.toString());
     let {cid, realm} = data.meta;
 
+    let method = topic.slice(realm.length);
+
     if (cid) {
         if (sockets.has(cid)) {
-            sockets.get(cid).emit(data)
+            sockets.get(cid).emit(data, method)
         } else {
             console.error(`Unknown CID: ${cid}`)
         }
     } else if (realm) {
-        sockets.values.filter(sock => sock[DATA_SENTINEL].realm == realm).forEach(sock => sock.emit(data))
+        sockets.values.filter(sock => sock[DATA_SENTINEL].realm == realm).forEach(sock => sock.emit(data, method))
     } else {
         console.error("Huh?")
     }
@@ -72,8 +74,8 @@ server.on('connection', (socket) => {
         console.log(`Handling message with method of '${data.method}'`);
 
         if (data.method == "register") {
-            socket.emit = function (data) {
-                this.send(JSON.stringify(_.omit(data, ['meta'])))
+            socket.emit = function (data, method) {
+                this.send(JSON.stringify(_.extend(_.omit(data, ['meta']), {method})))
             };
 
             socket[DATA_SENTINEL] = {
