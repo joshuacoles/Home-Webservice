@@ -2,8 +2,8 @@
 .idea/
 
 # Compiled
-*.compiled.js
-*.compiled.js.map
+*.js
+*.js.map
 
 # Logs
 logs
